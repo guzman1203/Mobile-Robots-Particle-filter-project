@@ -4,6 +4,12 @@ import numpy as np
 from scipy.stats import norm
 from fairis_tools.my_robot import MyRobot
 
+
+
+
+
+
+
 # Initialize robot and sensors
 robot = MyRobot()
 
