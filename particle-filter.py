@@ -1,5 +1,6 @@
 import math
 import time
+import heapq
 from fairis_tools.my_robot import MyRobot
 
 # Initialize robot and sensors
@@ -46,6 +47,155 @@ WALL_CONFIG = [
     ['O', 'O', 'W', 'O'], ['O', 'W', 'O', 'W'], ['O', 'W', 'O', 'W'], ['O', 'W', 'O', 'W'], ['W', 'O', 'O', 'O'],
     ['O', 'O', 'W', 'W'], ['O', 'W', 'O', 'W'], ['O', 'W', 'O', 'W'], ['O', 'W', 'O', 'W'], ['W', 'O', 'O', 'W'],
 ]
+
+# Adjacency list wall configuration
+CELL_GRAPH = {
+     1: [ 2,  6],       2: [ 1,  3],   3: [ 2,  4],   4: [ 3,  5],   5: [ 4, 10],
+     6: [ 1, 11],       7: [ 8    ],   8: [ 7,  9],   9: [ 8, 10],  10: [ 5,  9],
+    11: [ 6, 12, 16],  12: [11, 13],  13: [12, 14],  14: [13, 15],  15: [14, 20],
+    16: [11, 17, 21],  17: [16, 18],  18: [17, 19],  19: [18, 20],  20: [15, 19, 25],
+    21: [16, 22],      22: [21, 23],  23: [22, 24],  24: [23, 25],  25: [20, 24]
+}
+
+def get_coordinates_from_cellnumber(grid_size, cell_number):
+    '''Assumes that the grid size is odd and center is 0,0'''
+
+    horizontal_depth = cell_number % grid_size
+    vertical_depth = cell_number // grid_size + (1 if horizontal_depth != 0 else 0)
+    x_coordinate = horizontal_depth - grid_size//2 - 1
+    y_coordinate = vertical_depth - grid_size//2 -1
+
+    return y_coordinate, x_coordinate
+
+def get_shortest_path(start, goal):
+    '''
+    Using dijkstra's algorithm, returns the path string in the from of a combination of ENWS movements.
+
+    Args:
+        start (int) : the cell number of the starting cell
+        goal  (int) : the cell number of the goal cell
+    '''
+    distances_to_cells = dijkstra_uniform_adjaceny_list(CELL_GRAPH, start)
+    return distances_to_cells[goal]
+
+def dijkstra_uniform_adjaceny_list(graph, start):
+    '''
+    Dijkstra's algorithm assuming uniform weights and with an adjacency list
+
+    Args:
+        graph (dict) : a graph in adjaceny list format
+        start (int) : starting cell number
+    
+    Returns:
+        an dictionary of distances to each cell number from the starting cell
+    '''
+
+    priority_que = [(0, start)]
+    distances = {node: float('inf') for node in graph}
+    distances[start] = 0
+
+    while priority_que:
+        current_distance, current_node = heapq.heappop(priority_que)
+        for neighbor in graph[current_node]:
+            distance = current_distance + 1
+            if distance < distance[neighbor]:
+                distance[neighbor] = distance
+                heapq.heappush(priority_que, (distance, neighbor))
+
+    return distances
+
+
+# Main Requirements
+    # Maze Representation: 
+        # Reqs
+            # Implement a data structure to represent the maze, 
+            # capturing details about cell connectivity and obstacles. 
+            # Each cell should be able to store information about walls or open paths to neighboring cells.
+        
+        # Questions
+
+        # Hidden rules
+
+        # Solutions
+            # Graph: an undirected adjacency list with cell numbers as labels
+
+    # Shortest Path Calculation: 
+        # Reqs
+            # Develop an algorithm to compute the shortest path between a given starting cell and a goal cell. 
+            # This pathfinding algorithm should be efficient and should return a sequence of cells that the robot must traverse to reach the goal.
+        
+        # Questions
+
+        # Hidden rules
+
+        # Solutions
+            # Dijkstra's Algorithm
+
+    # Path Display:  
+        # Reqs
+            # Once the shortest path is calculated, 
+            # print the complete path sequence, 
+            # showing each cell that the robot will pass through from the start to the goal. 
+            # This should be displayed in a clear, ordered format.
+        
+        # Questions
+
+        # Hidden rules
+
+        # Solutions
+            # 
+
+    # Path Navigation:  
+        # Reqs
+            # Program the robot to navigate along the calculated path. 
+            # The robot should move sequentially from the starting cell through each cell in the path until it reaches the goal.
+        
+        # Questions
+
+        # Hidden rules
+
+        # Solutions
+            # 
+
+    # Pose Estimation Printing: 
+        # Reqs
+            # Each time the robot enters a new cell, 
+            # print the robot’s current pose estimate, which includes its position and orientation in the maze. 
+            # This estimate should update as the robot progresses along the path.
+        
+        # Questions
+
+        # Hidden rules
+
+        # Solutions
+            # 
+
+    #Task Completion: 
+        # Reqs
+            # The robot should stop once it reaches the goal cell. 
+            # At this point, the robot should print a final message indicating that it has reached its destination.
+        
+        # Questions
+
+        # Hidden rules
+
+        # Solutions
+            # 
+
+    # Video Requirements:  
+        # Reqs
+            # For the video submission, test your algorithm by setting ten unique starting locations, with the goal cell set to cell 7 in each test. 
+            # Use the maze configuration provided in maze8.xml for this task. 
+            # The video should demonstrate the algorithm calculating the shortest path from each of the ten starting cells to the goal and then show the robot navigating along the calculated path. 
+            # Ensure that each example starts from a different cell and that the robot correctly follows the path to reach the goal. 
+            # For each starting location demonstrated in the video, include the calculated path in your report to provide a complete record of the algorithm’s output and path execution.
+        
+        # Questions
+
+        # Hidden rules
+
+        # Solutions
+            # 
 
 # Function to orient the robot to a target orientation
 def pid_set_orientation(target):
