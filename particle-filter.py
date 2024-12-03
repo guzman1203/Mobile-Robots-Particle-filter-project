@@ -1,40 +1,40 @@
 import math
 import time
-import numpy as np
-from scipy.stats import norm
 from fairis_tools.my_robot import MyRobot
 
 # Initialize robot and sensors
 robot = MyRobot()
 
-GRID_SIZE = 5  # 5x5 grid
-CELL_SIZE = 1.0  # Each grid cell is 1x1 meter
-MAX_CELLS = 20
-
-# Max and Min motor velocities
+# Robot constants
 MAX_ROTATIONAL = 4.0
 MAX_VELOCITY = robot.max_motor_velocity
 
-# Cardinal Orientations
+# Camera constants
+CAMERA_WIDTH = robot.rgb_camera.getWidth()
+CAMERA_CENTER_X = CAMERA_WIDTH / 2
+
+# Environment
+GRID_SIZE = 5  # 5x5 grid
+CELL_SIZE = 1.0  # cell size is 1 meter by 1 meter
+
+# Cardinal orientations
 EAST = 0
 NORTH = 90
 WEST = 180
 SOUTH = 270
 CARDINALS = [EAST, NORTH, WEST, SOUTH]
 
-# tolerance on PIDs
+# PID controller tolerances
 THRESHOLD_FROM_WALL = 1
 ORIENTATION_TOLERANCE = math.radians(0.1)
 MOVEMENT_TOLERANCE = 0.001
 
-# robot camera properties
-CAMERA_WIDTH = robot.rgb_camera.getWidth()
-CAMERA_CENTER_X = CAMERA_WIDTH / 2
-
 # Load maze environment
 robot.load_environment('../../worlds/Fall24/maze8.xml')
+
 # Get the time step 
 timestep = int(robot.getBasicTimeStep())
+
 # Move robot to a random staring position 
 robot.move_to_start()
  
@@ -47,169 +47,24 @@ WALL_CONFIG = [
     ['O', 'O', 'W', 'W'], ['O', 'W', 'O', 'W'], ['O', 'W', 'O', 'W'], ['O', 'W', 'O', 'W'], ['W', 'O', 'O', 'W'],
 ]
 
-# Navigation through the maze
-    # the robot needs to traverse each cell one by one to allow for a sensor readings
-    # new cells can be detected VIA
-        # moving 1 meter
-    # the robot needs to tell the difference between 15 cells
-    # the robot would be set up with a dead end before the 15 different cells
-        # uniques = cells with unique patterns
-        # available tools
-            # compass
-            # encoders
-            # lidar
-        # 
-        
-        # ideas
-            # finding a unique orientates location
-            # keeping track of potential paths using an array of potential cells, where each cell represents the head of the path
-                # we keep track of the movements the robot makes
-                # for every new cell traveled to, 
-                    # we apply the movement to our path cells
-                    # we measure the cells walls
-                    # we cull impossible paths
-
-        # what we need
-            # to keep track of the movements we take
-            # to tell when we reached a dead end
-            # to tell when we backtrack on previously tracked ground
-            
-            # keep a group of path head cells
-            # be able to apply transitions to path head cells, leading to path simulation
-            # cull mismatching path heads given current sensor model readings
-            
-            # 
-            
-        # what we have
-            # we have the ability to get a list of cells that we have the most probability of residing in
-            # get a list of cardinal sensor model readings
-            # to move around the maze
-         
-        
-        # movement
-            # going around corners logic
-                # 
-            
-        # movement tracking
-            # after every PID move forward, append an F to the string
-            # after every setOrientation(WNES), append the corresponding cardinal to the string
-            
-            # could set the string to repeating letter format
-            
-            # W-F-F-F-F-N-F-E-F-F-F-F-N-F-W-F-F-F-F
-            
-            
-        # starting a graph
-            # use a graph and a visited coordinate set to keep track of visited cells
-            # when the robot starts, it also starts a graph with 1 node with a coordinate of 0,0, also the visited set has 0,0
-            # as the robot enters a new cell, it adds to the graph and the visited set based on the direction it took
-            
-            # graph is implemented using a dictionary with coordinates as keys for easy lookup
-            # the graph initializes at a cell node with 0,0 and branches out with new cell nodes from there
-            
-            # structure
-                # graph
-                    # a global changable dictionary to store coordinate keys nodes value pairs for easy lookup
-                    # a get_node(coordinate) function that returns a node given a coordinate
-                
-                # node
-                    # key: coorinates
-                    # neighbor list whitch point to other nodes
-                        # the edges can be infered          
-            
-            # initialization
-                # the first node is at 0,0 for the graph 
-                # we add leafnodes/neighbors corresponding to open walls in the cardinal directions
-                # we can calc the neighbors coordinates via:
-                    # east  = y   , x+1
-                    # north = y+1 , x
-                    # west  = y   , x-1
-                    # south = y-1 , x
-                # keep a head node with the next positionition of the robot in the graph
-                     
-            # for every new cell
-                # 
-                # get the leafnode from the graph
-                # 
-                # the graph calculates 
-                
-                
-        # visited set implementation pseudocode
-            # summary
-            # use a visited set of coordinate keys starting at 0,0 to keep track of where the robot has been
-            # assume movement logic will traverse all cells given this visited set 
-            # will use keys in r-c format
-            
-            # initialization
-            # start the visited set with the element 0-0
-            # keep a headcell with the current robots coordinates
-            
-            # for every new cell
-                # use the cardinal taken to calc the new_cell's position coordinates
-                    # we know the cardinal from after moving a cell and calling get_current_facing_cardinal()
-                    # moved East  :  y   , x+1  
-                    # moved North :  y+1 , x
-                    # moved West  :  y   , x-1
-                    # moved south :  y-1 , x-1
-                # add a new key to the visited set with those coordinates
-        
-        # movement logic
-            # summary - based on start location
-            # the idea is to start with keeping a start coordinate, following the left wall, and a need_new_start flag and left_wall_following flag 
-            # at every cell determine what is the coordinate you are traversing to next
-            # ask if it is that cell is the start coordinate
-                # if it is
-                    # switch wall followings
-                    # and toggle need_new_start
-                # if it has NOT
-                    # keep following the same wall
-                    # if need_new_start
-                        # toggle need_new_start
-                        # start = these coordinates
-
-            # summary - based on visited locations
-            # the idea is to start with following the left wall and ignore_visited flag 
-            # at every cell determine what is the coordinate you are traversing to next
-            # ask if it is that cell has been visited
-                # if it is and ignore_visited == False
-                    # switch wall followings
-                    # ignore_visited = True
-                # if it has NOT
-                    # ignore_visited = False
-                    # keep following the same wall
-                    
-
-# COMPLETE
-    # movement
-    # wall detecting in correct orientation
-    # cell_probabilities and get_highest_prob
-    
-# NOT COMPLETE
-    # perfecting movement
-    # traversal logic
-    # tracking traversal
-        # traversal string
-        # or graph
-        # or visited coordinates
-
-
-
 # Function to orient the robot to a target orientation
-def set_orientation_pid(target_orientation):
+def pid_set_orientation(target):
     """
-    Orient the robot to a specified orientation (in radians) using a PID controller,
-    with motor velocity limits of ±4, and using robot.step(timestep) for Webots compatibility.
+    Orient the robot to a specified orientation using a PID controller,
+    using the robot's compass utility and accomplished via the robots motor velocities.
 
     Args:
-        target_orientation_rad (float): The desired orientation in radians (0 to 2π).
-        timestep (int): The simulation timestep for robot.step.
-
-    Returns:
-        bool: True if the robot successfully orients itself within a tolerance, False otherwise.
+        target_orientation_rad (float): The desired orientation in degrees.
     """
     
+    # Check to change offet to compass readings for orientation to take the shortest path
+    compass_offset = 0
+    if abs(target - robot.get_compass_reading()) > 180:
+        target = (target + 180) % 360
+        compass_offset = 180
+        
     # Convert target orientation from degrees to radians
-    target_orientation_rad = math.radians(target_orientation)
+    target_rads = math.radians(target)
     
     # PID control parameters
     Kp = 8.0   # Proportional gain
@@ -225,16 +80,16 @@ def set_orientation_pid(target_orientation):
     while robot.step(timestep) != -1:
             
         # Get the robot's current orientation
-        current_orientation = math.radians(robot.get_compass_reading())  # In radians
+        current_orientation = math.radians((robot.get_compass_reading() + compass_offset) % 360)  # In radians
         #print(f"current_orientation={current_orientation:.4f}m")
 
         # Calculate the error in orientation
-        error = target_orientation_rad - current_orientation
+        error = target_rads - current_orientation
         #print(f"error={error:.4f}m")
 
         # If the error is within tolerance, stop the robot and return success
         if abs(error) <= ORIENTATION_TOLERANCE:
-            print(f"    Robot oriented to {math.degrees(target_orientation_rad):.4f} degrees.")
+            print(f"    Robot oriented to {math.degrees(target_rads):.4f} degrees.")
             robot.set_left_motors_velocity(0)
             robot.set_right_motors_velocity(0)
             return True
@@ -264,19 +119,19 @@ def set_orientation_pid(target_orientation):
 
 def set_orientation_east():
     print(f"Orienting to the EAST:{EAST}")
-    set_orientation_pid(EAST)
+    pid_set_orientation(EAST)
 
 def set_orientation_north():
     print(f"Orienting to the NORTH:{NORTH}")
-    set_orientation_pid(NORTH)
+    pid_set_orientation(NORTH)
 
 def set_orientation_west():
     print(f"Orienting to the WEST:{WEST}")
-    set_orientation_pid(WEST)
+    pid_set_orientation(WEST)
 
 def set_orientation_south():
     print(f"Orienting to the SOUTH:{SOUTH}")
-    set_orientation_pid(SOUTH)
+    pid_set_orientation(SOUTH)
 
 def normalize_degree(angle):
     """Normalize an angle to be within the range [-π, π]."""
@@ -287,7 +142,7 @@ def set_orientation_cardinal_reverse():
     current = get_current_facing_cardinal()
     opposites = {EAST: WEST, NORTH: SOUTH, 
                  WEST: EAST, SOUTH: NORTH}
-    set_orientation_pid(opposites[current])
+    pid_set_orientation(opposites[current])
 
 def set_orientation_turn_left_90():
     left_turns = {
@@ -297,7 +152,7 @@ def set_orientation_turn_left_90():
         SOUTH : EAST
     }
     facing_cardinal = get_current_facing_cardinal()
-    set_orientation_pid(left_turns[facing_cardinal])
+    pid_set_orientation(left_turns[facing_cardinal])
     
 def set_orientation_turn_right_90():
     right_turns = {
@@ -307,7 +162,7 @@ def set_orientation_turn_right_90():
         SOUTH : WEST
     }
     facing_cardinal = get_current_facing_cardinal()
-    set_orientation_pid(right_turns[facing_cardinal])
+    pid_set_orientation(right_turns[facing_cardinal])
     
 def get_current_facing_cardinal():
     current = normalize_degree(robot.get_compass_reading())
@@ -326,7 +181,7 @@ def get_current_facing_cardinal():
     return abs(closest_cardinal)
 
 # Fuction to move the robot a target distance forward
-def move_forward_pid(target_distance, start_timestep):
+def pid_move_forward(target_distance, start_timestep):
     """
     Moves the robot forward by a specified target distance (in meters) using a PID controller
     based on the front-left motor encoder readings.
@@ -393,7 +248,7 @@ def move_forward_pid(target_distance, start_timestep):
     
 def move_forward_one_cell():
     print(f"Moving forward 1 cell")
-    move_forward_pid(CELL_SIZE, robot.timestep) 
+    pid_move_forward(CELL_SIZE, robot.timestep) 
 
 def move_forward_x_cells(x):
     for i in range(x):
@@ -448,17 +303,17 @@ def get_oriented_lidar_readings():
         
     return lidar_readings[current_cardinal]
 
-def is_dead_end():
-    return get_front_lidar_reading() < THRESHOLD_FROM_WALL and \
-           get_left_lidar_reading() < THRESHOLD_FROM_WALL and \
-           get_right_lidar_reading() < THRESHOLD_FROM_WALL
-    
 def get_walls(direction):
     lidar_readings = get_oriented_lidar_readings()
     walls_dict = {cardinal: lidar_readings[cardinal] < THRESHOLD_FROM_WALL
                   for cardinal in lidar_readings}
     return walls_dict
 
+def is_dead_end():
+    return get_front_lidar_reading() < THRESHOLD_FROM_WALL and \
+           get_left_lidar_reading() < THRESHOLD_FROM_WALL and \
+           get_right_lidar_reading() < THRESHOLD_FROM_WALL
+    
 def is_front_wall():
     return get_front_lidar_reading() < THRESHOLD_FROM_WALL
 
@@ -533,12 +388,12 @@ def get_highest_probability_cells(probabilities):
 
 def print_probabilities(probabilities):
 
-    '''TODO: Prin in a grid'''
+    '''TODO: Print in a grid'''
 
     for cell, prob in enumerate(probabilities, start=1):
         print(f"Cell {cell}: Probability = {prob:.3f}")
 
-def get_next_position(curr_position):
+def get_next_position(current_position):
     """
     Calculate the next position to move to based on the next positionition.
 
@@ -548,7 +403,7 @@ def get_next_position(curr_position):
     Returns:
         tuple: The next grid position as (r, c).
     """
-    r, c = curr_position
+    r, c = current_position
     cardinal_direction = get_current_facing_cardinal()
     result = None
 
@@ -562,7 +417,7 @@ def get_next_position(curr_position):
 def get_key_from_position(position):
     return f"{position[0]}-{position[1]}"
 
-def tracking_path_logic(visited, ignore_visited, nxt_position):
+def path_logic(visited, ignore_visited, nxt_position):
     # summary - based on visited locations
     # the idea is to start with following the left wall and ignore_visited flag 
     # at every cell determine what is the coordinate you are traversing to next
@@ -592,7 +447,7 @@ def navigate_maze(robot):
     ignore_visited = False
     following_left_wall = True
 
-    while robot.step(robot.timestep) != -1 and len(visited) < MAX_CELLS:
+    while robot.step(robot.timestep) != -1 and len(visited) < 15:
         
         wall_following_changes = False
         
@@ -632,7 +487,7 @@ def navigate_maze(robot):
         next_position = get_next_position(path_head)
         
         # determine path logic
-        wall_following_changes, ignore_visited = tracking_path_logic(visited, ignore_visited, next_position)
+        wall_following_changes, ignore_visited = path_logic(visited, ignore_visited, next_position)
         
         # toggle which wall the robot is following if needed
         if wall_following_changes:
@@ -652,361 +507,22 @@ def navigate_maze(robot):
         path_head = next_position
         
 
-    print("Robot visited 15 different cells!")
+    print("Robot visited {MAX_CELLS} different cells!")
     
-def test_components(robot):
-    
-    while robot.step(robot.timestep) != -1:
-        
-        ''' # testing movement
-        set_orientation_west()
-        move_forward_x_cells(4)
-        
-        set_orientation_north()
-        move_forward_x_cells(1)
-        
-        set_orientation_east()
-        move_forward_x_cells(4)
-        
-        set_orientation_north()
-        move_forward_x_cells(1)
-        
-        set_orientation_west()
-        move_forward_x_cells(4)
-        
-        set_orientation_north()
-        move_forward_x_cells(2)
-        
-        set_orientation_east()
-        move_forward_x_cells(4)
-        
-        set_orientation_south()
-        move_forward_x_cells(1)
-        
-        set_orientation_west()
-        move_forward_x_cells(3)
-        '''
-        ''' # testing reverse orientation
-        set_orientation_east()
-        print(f"    real:{robot.get_compass_reading()} cardinal:{get_current_facing_cardinal()}")
-        set_orientation_cardinal_reverse()
-        print(f"    real:{robot.get_compass_reading()} cardinal:{get_current_facing_cardinal()}")
-    
-        set_orientation_west()
-        print(f"    real:{robot.get_compass_reading()} cardinal:{get_current_facing_cardinal()}")
-        set_orientation_cardinal_reverse()
-        print(f"    real:{robot.get_compass_reading()} cardinal:{get_current_facing_cardinal()}")
-    
-    
-        set_orientation_north()
-        print(f"    real:{robot.get_compass_reading()} cardinal:{get_current_facing_cardinal()}")
-        set_orientation_cardinal_reverse()
-        print(f"    real:{robot.get_compass_reading()} cardinal:{get_current_facing_cardinal()}")
-   
-        
-        set_orientation_south()
-        print(f"    real:{robot.get_compass_reading()} cardinal:{get_current_facing_cardinal()}")
-        set_orientation_cardinal_reverse()
-        print(f"    real:{robot.get_compass_reading()} cardinal:{get_current_facing_cardinal()}")
-        '''
-        '''# test wall detection
-        set_orientation_west()
-        print_walls(get_current_facing_cardinal())
-        move_forward_x_cells(1)
-        print_walls(get_current_facing_cardinal())
-        move_forward_x_cells(1)
-        print_walls(get_current_facing_cardinal())
-        move_forward_x_cells(1)
-        print_walls(get_current_facing_cardinal())
-        move_forward_x_cells(1)
-        print_walls(get_current_facing_cardinal())
-        
-        set_orientation_north()
-        print_walls(get_current_facing_cardinal())
-        move_forward_x_cells(1)
-        print_walls(get_current_facing_cardinal())
-        
-        set_orientation_east()
-        print_walls(get_current_facing_cardinal())
-        move_forward_x_cells(1)
-        print_walls(get_current_facing_cardinal())
-        move_forward_x_cells(1)
-        print_walls(get_current_facing_cardinal())
-        move_forward_x_cells(1)
-        print_walls(get_current_facing_cardinal())
-        move_forward_x_cells(1)
-        print_walls(get_current_facing_cardinal())
-
-        set_orientation_north()
-        print_walls(get_current_facing_cardinal())
-        move_forward_x_cells(1)
-        print_walls(get_current_facing_cardinal())
-        
-        set_orientation_west()
-        print_walls(get_current_facing_cardinal())
-        move_forward_x_cells(1)
-        print_walls(get_current_facing_cardinal())
-        move_forward_x_cells(1)
-        print_walls(get_current_facing_cardinal())
-        move_forward_x_cells(1)
-        print_walls(get_current_facing_cardinal())
-        move_forward_x_cells(1)
-        print_walls(get_current_facing_cardinal())
- 
-        set_orientation_north()
-        print_walls(get_current_facing_cardinal())
-        move_forward_x_cells(1)
-        print_walls(get_current_facing_cardinal())
-        move_forward_x_cells(1)
-        print_walls(get_current_facing_cardinal())
-        
-        set_orientation_east()
-        print_walls(get_current_facing_cardinal())
-        move_forward_x_cells(1)
-        print_walls(get_current_facing_cardinal())
-        move_forward_x_cells(1)
-        print_walls(get_current_facing_cardinal())
-        move_forward_x_cells(1)
-        print_walls(get_current_facing_cardinal())
-        move_forward_x_cells(1)
-        print_walls(get_current_facing_cardinal())
-        
-        set_orientation_south()
-        print_walls(get_current_facing_cardinal())
-        move_forward_x_cells(1)
-        print_walls(get_current_facing_cardinal())
-        
-        set_orientation_west()
-        print_walls(get_current_facing_cardinal())
-        move_forward_x_cells(1)
-        print_walls(get_current_facing_cardinal())
-        move_forward_x_cells(1)
-        print_walls(get_current_facing_cardinal())
-        move_forward_x_cells(1)
-        print_walls(get_current_facing_cardinal())
-        '''
-        '''# test calculate_cell_probabilities and get_highest_probability_cells
-        set_orientation_west()
-        probs = calculate_cell_probabilities(get_walls(get_current_facing_cardinal()))
-        print(get_highest_probability_cells(probs))
-        move_forward_x_cells(1)
-        probs = calculate_cell_probabilities(get_walls(get_current_facing_cardinal()))
-        print(get_highest_probability_cells(probs))
-        move_forward_x_cells(1)
-        probs = calculate_cell_probabilities(get_walls(get_current_facing_cardinal()))
-        print(get_highest_probability_cells(probs))
-        move_forward_x_cells(1)
-        probs = calculate_cell_probabilities(get_walls(get_current_facing_cardinal()))
-        print(get_highest_probability_cells(probs))
-        move_forward_x_cells(1)
-        probs = calculate_cell_probabilities(get_walls(get_current_facing_cardinal()))
-        print(get_highest_probability_cells(probs))
-        
-        set_orientation_north()
-        move_forward_x_cells(1)
-        probs = calculate_cell_probabilities(get_walls(get_current_facing_cardinal()))
-        print(get_highest_probability_cells(probs))
-        
-        set_orientation_east()
-        move_forward_x_cells(1)
-        probs = calculate_cell_probabilities(get_walls(get_current_facing_cardinal()))
-        print(get_highest_probability_cells(probs))
-        move_forward_x_cells(1)
-        probs = calculate_cell_probabilities(get_walls(get_current_facing_cardinal()))
-        print(get_highest_probability_cells(probs))
-        move_forward_x_cells(1)
-        probs = calculate_cell_probabilities(get_walls(get_current_facing_cardinal()))
-        print(get_highest_probability_cells(probs))
-        move_forward_x_cells(1)
-        probs = calculate_cell_probabilities(get_walls(get_current_facing_cardinal()))
-        print(get_highest_probability_cells(probs))
-        
-        set_orientation_north()
-        move_forward_x_cells(1)
-        probs = calculate_cell_probabilities(get_walls(get_current_facing_cardinal()))
-        print(get_highest_probability_cells(probs))
-        
-        set_orientation_west()
-        move_forward_x_cells(1)
-        probs = calculate_cell_probabilities(get_walls(get_current_facing_cardinal()))
-        print(get_highest_probability_cells(probs))
-        move_forward_x_cells(1)
-        probs = calculate_cell_probabilities(get_walls(get_current_facing_cardinal()))
-        print(get_highest_probability_cells(probs))
-        move_forward_x_cells(1)
-        probs = calculate_cell_probabilities(get_walls(get_current_facing_cardinal()))
-        print(get_highest_probability_cells(probs))
-        move_forward_x_cells(1)
-        probs = calculate_cell_probabilities(get_walls(get_current_facing_cardinal()))
-        print(get_highest_probability_cells(probs))
-        
-        set_orientation_north()
-        move_forward_x_cells(1)
-        probs = calculate_cell_probabilities(get_walls(get_current_facing_cardinal()))
-        print(get_highest_probability_cells(probs))
-        move_forward_x_cells(1)
-        probs = calculate_cell_probabilities(get_walls(get_current_facing_cardinal()))
-        print(get_highest_probability_cells(probs))
-        
-        set_orientation_east()
-        move_forward_x_cells(1)
-        probs = calculate_cell_probabilities(get_walls(get_current_facing_cardinal()))
-        print(get_highest_probability_cells(probs))
-        move_forward_x_cells(1)
-        probs = calculate_cell_probabilities(get_walls(get_current_facing_cardinal()))
-        print(get_highest_probability_cells(probs))
-        move_forward_x_cells(1)
-        probs = calculate_cell_probabilities(get_walls(get_current_facing_cardinal()))
-        print(get_highest_probability_cells(probs))
-        move_forward_x_cells(1)
-        probs = calculate_cell_probabilities(get_walls(get_current_facing_cardinal()))
-        print(get_highest_probability_cells(probs))
-        
-        set_orientation_south()
-        move_forward_x_cells(1)
-        probs = calculate_cell_probabilities(get_walls(get_current_facing_cardinal()))
-        print(get_highest_probability_cells(probs))
-        
-        set_orientation_west()
-        move_forward_x_cells(1)
-        probs = calculate_cell_probabilities(get_walls(get_current_facing_cardinal()))
-        print(get_highest_probability_cells(probs))
-        move_forward_x_cells(1)
-        probs = calculate_cell_probabilities(get_walls(get_current_facing_cardinal()))
-        print(get_highest_probability_cells(probs))
-        move_forward_x_cells(1)
-        probs = calculate_cell_probabilities(get_walls(get_current_facing_cardinal()))
-        print(get_highest_probability_cells(probs))
-        '''
-        '''# test getting next position
-        set_orientation_west()
-        next_position = get_next_position((0,0))
-        print(f"next position: {next_position}")
-        move_forward_x_cells(1)
-        next_position = get_next_position(next_position)
-        print(f"next position: {next_position}")
-        move_forward_x_cells(1)
-        next_position = get_next_position(next_position)
-        print(f"next position: {next_position}")
-        move_forward_x_cells(1)
-        next_position = get_next_position(next_position)
-        print(f"next position: {next_position}")
-        move_forward_x_cells(1)
-        
-
-        set_orientation_north()
-        next_position = get_next_position(next_position)
-        print(f"next position: {next_position}")
-        move_forward_x_cells(1)
-        
-
-        set_orientation_east()
-        next_position = get_next_position(next_position)
-        print(f"next position: {next_position}")
-        move_forward_x_cells(1)
-        next_position = get_next_position(next_position)
-        print(f"next position: {next_position}")
-        move_forward_x_cells(1)
-        next_position = get_next_position(next_position)
-        print(f"next position: {next_position}")
-        move_forward_x_cells(1)
-        next_position = get_next_position(next_position)
-        print(f"next position: {next_position}")
-        move_forward_x_cells(1)
-        
-        
-        set_orientation_north()
-        next_position = get_next_position(next_position)
-        print(f"next position: {next_position}")
-        move_forward_x_cells(1)
-        
-        
-        set_orientation_west()
-        next_position = get_next_position(next_position)
-        print(f"next position: {next_position}")
-        move_forward_x_cells(1)
-        next_position = get_next_position(next_position)
-        print(f"next position: {next_position}")
-        move_forward_x_cells(1)
-        next_position = get_next_position(next_position)
-        print(f"next position: {next_position}")
-        move_forward_x_cells(1)
-        next_position = get_next_position(next_position)
-        print(f"next position: {next_position}")
-        move_forward_x_cells(1)
-        
-        set_orientation_north()
-        next_position = get_next_position(next_position)
-        print(f"next position: {next_position}")
-        move_forward_x_cells(1)
-        next_position = get_next_position(next_position)
-        print(f"next position: {next_position}")
-        move_forward_x_cells(1)
-        
-        
-        set_orientation_east()
-        next_position = get_next_position(next_position)
-        print(f"next position: {next_position}")
-        move_forward_x_cells(1)
-        next_position = get_next_position(next_position)
-        print(f"next position: {next_position}")
-        move_forward_x_cells(1)
-        next_position = get_next_position(next_position)
-        print(f"next position: {next_position}")
-        move_forward_x_cells(1)
-        next_position = get_next_position(next_position)
-        print(f"next position: {next_position}")
-        move_forward_x_cells(1)
-        
-        
-        set_orientation_south()
-        next_position = get_next_position(next_position)
-        print(f"next position: {next_position}")
-        move_forward_x_cells(1)
-        
-        
-        set_orientation_west()
-        next_position = get_next_position(next_position)
-        print(f"next position: {next_position}")
-        move_forward_x_cells(1)
-        next_position = get_next_position(next_position)
-        print(f"next position: {next_position}")
-        move_forward_x_cells(1)
-        next_position = get_next_position(next_position)
-        print(f"next position: {next_position}")
-        move_forward_x_cells(1)
-        '''
-
-        
-        # test path tracking and navigation
-        
-    '''
-    visited_cells = set()
-    for _ in range(15):  # Visit at least 15 cells
-        readings = get_sensor_readings(robot)  # sensor readings in cardinal directions
-        probabilities = calculate_cell_probabilities(readings)
-        
-        print_probabilities(probabilities)
-        
-        highest_prob_cells = get_highest_probability_cells(probabilities)
-        print(f"Predicted cells with the highest probability: {highest_prob_cells}")
-        
-        
-        current_cell = get_current_cell(robot)  # Simulated function to determine current cell ########
-        visited_cells.add(current_cell)
-        
-        
-        move_to_next_cell(robot, visited_cells)  # Move to a new cell
-    '''
-    
-
 # Main program
 def main():
     # Main loop: Perform simulation Iterations until Webots stops the controller
     start_time = time.time()
 
     navigate_maze(robot)
-    
+    # while robot.timestep != -1:
+    #     move_forward_one_cell()
+    #     set_orientation_north()
+    #     set_orientation_east()
+    #     set_orientation_west()
+    #     set_orientation_south()
+
+
     # Calculate total travel time
     end_time = time.time()
     travel_time = end_time - start_time
