@@ -1,7 +1,8 @@
 import math
 import time
-import particle_filter_helper
 from fairis_tools.my_robot import MyRobot
+from constants import GRID_SIZE, CELL_SIZE, EAST, NORTH, WEST, SOUTH, CARDINALS, WALL_CONFIG
+import particle_filter_helper
 
 # Initialize robot and sensors
 robot = MyRobot()
@@ -13,17 +14,6 @@ MAX_VELOCITY = robot.max_motor_velocity
 # Camera constants
 CAMERA_WIDTH = robot.rgb_camera.getWidth()
 CAMERA_CENTER_X = CAMERA_WIDTH / 2
-
-# Environment
-GRID_SIZE = 5  # 5x5 grid
-CELL_SIZE = 1.0  # cell size is 1 meter by 1 meter
-
-# Cardinal orientations
-EAST = 0
-NORTH = 90
-WEST = 180
-SOUTH = 270
-CARDINALS = [EAST, NORTH, WEST, SOUTH]
 
 # PID controller tolerances
 THRESHOLD_FROM_WALL = 1
@@ -38,15 +28,6 @@ timestep = int(robot.getBasicTimeStep())
 
 # Move robot to a random staring position 
 robot.move_to_start()
- 
-# Known wall configuration
-WALL_CONFIG = [
-    ['O', 'W', 'W', 'O'], ['O', 'W', 'O', 'W'], ['O', 'W', 'O', 'W'], ['O', 'W', 'O', 'W'], ['W', 'W', 'O', 'O'],
-    ['W', 'O', 'W', 'O'], ['O', 'W', 'W', 'W'], ['O', 'W', 'O', 'W'], ['O', 'W', 'O', 'W'], ['W', 'O', 'O', 'W'],
-    ['O', 'O', 'W', 'O'], ['O', 'W', 'O', 'W'], ['O', 'W', 'O', 'W'], ['O', 'W', 'O', 'W'], ['W', 'W', 'O', 'O'],
-    ['O', 'O', 'W', 'O'], ['O', 'W', 'O', 'W'], ['O', 'W', 'O', 'W'], ['O', 'W', 'O', 'W'], ['W', 'O', 'O', 'O'],
-    ['O', 'O', 'W', 'W'], ['O', 'W', 'O', 'W'], ['O', 'W', 'O', 'W'], ['O', 'W', 'O', 'W'], ['W', 'O', 'O', 'W'],
-]
 
 # Main Requirements
     # Maze Representation: 

@@ -1,15 +1,8 @@
 import heapq
+import re
+from colorama import Fore, Style
+from constants import GRID_SIZE, CELL_SIZE, CELL_GRAPH
 
-# Adjacency list wall configuration
-CELL_GRAPH = {
-     1: [ 2,  6],       2: [ 1,  3],   3: [ 2,  4],   4: [ 3,  5],   5: [ 4, 10],
-     6: [ 1, 11],       7: [ 8    ],   8: [ 7,  9],   9: [ 8, 10],  10: [ 5,  9],
-    11: [ 6, 12, 16],  12: [11, 13],  13: [12, 14],  14: [13, 15],  15: [14, 20],
-    16: [11, 17, 21],  17: [16, 18],  18: [17, 19],  19: [18, 20],  20: [15, 19, 25],
-    21: [16, 22],      22: [21, 23],  23: [22, 24],  24: [23, 25],  25: [20, 24]
-}
-
-GRID_SIZE = 5
 
 def get_environment_coords(cell_number):
     '''
@@ -91,7 +84,7 @@ def get_shortest_path(start, goal):
     '''
     # TODO improve via a .get for the case that goal is unreachable
 
-    path = 1
+    path = 1 # index of the path
     return get_all_shortest_paths(start)[goal][path]
 
 def get_cell_map_coords(cell_number):
@@ -100,6 +93,19 @@ def get_cell_map_coords(cell_number):
 
     return row, col
 
+def get_cell_number(row, column):
+    return row * GRID_SIZE + column + 1
+
+# Helper function to calculate visible length of a string
+def visible_length(text):
+    color_code_pattern = re.compile(r'\x1b\[[0-9;]*m')  # Matches ANSI color codes
+    return len(color_code_pattern.sub('', text))  # Remove color codes and calculate length
+
+# Helper function to center text with color codes
+def color_center(text, width):
+    text_length = visible_length(text)
+    padding = (width - text_length) // 2
+    return " " * padding + text + " " * (width - text_length - padding)
 def print_path(grid_size, start_cell, path, current_cell):
     '''
     Displays the path in the grid and the position given. Intended to represent the current location of the robot with it's path.
@@ -112,8 +118,11 @@ def print_path(grid_size, start_cell, path, current_cell):
     sy, sx = get_cell_map_coords(start_cell)
     cy, cx = get_cell_map_coords(current_cell)
 
-    # Add start cell to path_coords
+    # Add start cell to path coordinates
     path_coords = [(sy, sx)]
+
+    # Add start cell to path cell numbers
+    path_cell_numbers = [f"{Fore.GREEN}{str(start_cell)}"]
 
     # Define movement map
     moves = {
@@ -124,32 +133,43 @@ def print_path(grid_size, start_cell, path, current_cell):
     }
 
     # Generate the path coordinates
-    y, x = sy, sx
+    row, col = sy, sx
     for direction in path:
         dy, dx = moves[direction]
-        y += dy
-        x += dx
-        path_coords.append((y, x))
+        row += dy
+        col += dx
+        path_coords.append((row, col))
+        path_cell_numbers.append(f"{Fore.BLUE}{str(get_cell_number(row, col))}")
+    path_cell_numbers[-1] = f"{Fore.RED}{get_cell_number(row, col)}"
+
 
     # Calculate the width needed for formatting
     max_width = len(str(grid_size*grid_size))
 
+    # Print cell numbers on path
+    print("\nCells on path:")
+    print(", ".join(path_cell_numbers))
+
+    # Print path on cell map and current position
     print("\nCell Map:")
     print("-|-".join(["-"*max_width] * grid_size))
     for row in range(grid_size):
         row_output = []
         for col in range(grid_size):
             if row == cy and col == cx:
-                cell = "R"
+                cell = f"{Fore.RED}{get_cell_number(row, col)}{Style.RESET_ALL}"
             elif row == sy and col == sx:
-                cell = "S"
+                cell = f"{Fore.GREEN}{start_cell}{Style.RESET_ALL}"
             elif (row, col) in path_coords:
-                cell = "~"
+                cell = f"{Fore.BLUE}{get_cell_number(row, col)}{Style.RESET_ALL}"
             else:
                 cell = str(grid[row][col])
-            row_output.append(cell.center(max_width))
-        print(" | ".join(row_output) )
+            row_output.append(color_center(cell, max_width))
+        print(" | ".join(row_output))
         print("-|-".join(["-"*max_width] * grid_size))
+    print(f"{Fore.BLUE}path{Style.RESET_ALL}, {Fore.GREEN}starting cell{Style.RESET_ALL}, {Fore.RED}current location{Style.RESET_ALL}")
+
 
 if __name__ == "__main__":
-    print_path(5, 13, "WWNNEEEESWW", 7)
+    # testing
+    print_path(5, 13, "WWNNEEEESWWW", 7)
