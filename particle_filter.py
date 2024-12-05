@@ -1,8 +1,28 @@
 import math
 import time
 from fairis_tools.my_robot import MyRobot
-from constants import GRID_SIZE, CELL_SIZE, EAST, NORTH, WEST, SOUTH, CARDINALS, WALL_CONFIG
-import particle_filter_helper
+from constants import GRID_SIZE, CELL_SIZE, EAST, NORTH, WEST, SOUTH, CARDINALS, WALL_CONFIG, CELL_GRAPH
+from localization_helper import (
+    calculate_cell_probabilities, 
+    get_highest_probability_cells, 
+    get_next_position,
+    path_logic,
+    get_key_from_position,
+)
+from particle_filter_helper import (
+    SPLIT_STR,
+    Position,
+    get_coordinates_from_cellnumber_env,
+    get_cellnumber_from_coordinates_env,
+    get_coordinates_from_cellnumber_matrix,
+    get_cellnumber_from_coordinates_matrix,
+    get_cardinal_between_neighbors,
+    get_shortest_path,
+    old_get_all_shortest_paths,
+    old_get_shortest_path,
+    print_path,
+    get_navigation_from_path,
+)
 
 # Initialize robot and sensors
 robot = MyRobot()
@@ -30,51 +50,13 @@ timestep = int(robot.getBasicTimeStep())
 robot.move_to_start()
 
 # Main Requirements
-    # Maze Representation: 
-        # Reqs
-            # Implement a data structure to represent the maze, 
-            # capturing details about cell connectivity and obstacles. 
-            # Each cell should be able to store information about walls or open paths to neighboring cells.
-        
-        # Questions
-
-        # Hidden rules
-
-        # Solutions
-            # Graph: an undirected adjacency list with cell numbers as labels
-
-    # Shortest Path Calculation: 
-        # Reqs
-            # Develop an algorithm to compute the shortest path between a given starting cell and a goal cell. 
-            # This pathfinding algorithm should be efficient and should return a sequence of cells that the robot must traverse to reach the goal.
-        
-        # Questions
-
-        # Hidden rules
-
-        # Solutions
-            # Dijkstra's Algorithm
-
-    # Path Display:  
-        # Reqs
-            # Once the shortest path is calculated, 
-            # print the complete path sequence, 
-            # showing each cell that the robot will pass through from the start to the goal. 
-            # This should be displayed in a clear, ordered format.
-        
-        # Questions
-
-        # Hidden rules
-
-        # Solutions
-            # 
-
     # Path Navigation:  
         # Reqs
             # Program the robot to navigate along the calculated path. 
             # The robot should move sequentially from the starting cell through each cell in the path until it reaches the goal.
         
         # Questions
+            # does the robot know its starting cell?
 
         # Hidden rules
 
@@ -88,6 +70,7 @@ robot.move_to_start()
             # This estimate should update as the robot progresses along the path.
         
         # Questions
+            # does the robot know its starting cell?
 
         # Hidden rules
 
@@ -163,7 +146,7 @@ def pid_set_orientation(target):
 
         # If the error is within tolerance, stop the robot and return success
         if abs(error) <= ORIENTATION_TOLERANCE:
-            print(f"    Robot oriented to {math.degrees(target_rads):.4f} degrees.")
+            # print(f"    Robot oriented to {math.degrees(target_rads):.4f} degrees.")
             robot.set_left_motors_velocity(0)
             robot.set_right_motors_velocity(0)
             return True
@@ -191,25 +174,25 @@ def pid_set_orientation(target):
         
         # print(f"     current orienation {math.degrees(current_orientation):.4f}     control signal: {control_signal:.2f}\n")
 
-def set_orientation_east():
-    print(f"Orienting to the EAST:{EAST}")
-    pid_set_orientation(EAST)
-
-def set_orientation_north():
-    print(f"Orienting to the NORTH:{NORTH}")
-    pid_set_orientation(NORTH)
-
-def set_orientation_west():
-    print(f"Orienting to the WEST:{WEST}")
-    pid_set_orientation(WEST)
-
-def set_orientation_south():
-    print(f"Orienting to the SOUTH:{SOUTH}")
-    pid_set_orientation(SOUTH)
-
 def normalize_degree(angle):
     """Normalize an angle to be within the range [-π, π]."""
     return (math.radians(angle) + math.pi) % (2 * math.pi) - math.pi
+
+def set_orientation_east(is_print:bool):
+    if is_print: print(f"Orienting to the EAST:{EAST}")
+    pid_set_orientation(EAST)
+
+def set_orientation_north(is_print:bool):
+    if is_print: print(f"Orienting to the NORTH:{NORTH}")
+    pid_set_orientation(NORTH)
+
+def set_orientation_west(is_print:bool):
+    if is_print: print(f"Orienting to the WEST:{WEST}")
+    pid_set_orientation(WEST)
+
+def set_orientation_south(is_print:bool):
+    if is_print: print(f"Orienting to the SOUTH:{SOUTH}")
+    pid_set_orientation(SOUTH)
 
 def set_orientation_cardinal_reverse():
     print(f"Reversing orientation")
@@ -320,13 +303,13 @@ def pid_move_forward(target_distance, start_timestep):
         #      f"     Error: {error:.2f}, Control Signal: {control_signal:.2f}")
     #print(f"     Current Servomotors Velocity: {control_signal :.2f} m/s")
     
-def move_forward_one_cell():
-    print(f"Moving forward 1 cell")
+def move_forward_one_cell(is_print:bool = True):
+    if is_print: print(f"Moving forward 1 cell")
     pid_move_forward(CELL_SIZE, robot.timestep) 
 
-def move_forward_x_cells(x):
+def move_forward_x_cells(x, is_print:bool = True):
     for i in range(x):
-        move_forward_one_cell()
+        move_forward_one_cell(is_print)
 
 def get_front_lidar_reading():
     return robot.get_lidar_range_image()[400]
@@ -377,7 +360,7 @@ def get_oriented_lidar_readings():
         
     return lidar_readings[current_cardinal]
 
-def get_walls(direction):
+def get_walls():
     lidar_readings = get_oriented_lidar_readings()
     walls_dict = {cardinal: lidar_readings[cardinal] < THRESHOLD_FROM_WALL
                   for cardinal in lidar_readings}
@@ -402,7 +385,7 @@ def is_rear_wall():
     
 def print_walls(direction):
     print(f"Direction of reading: {direction}")
-    walls = get_walls(direction)
+    walls = get_walls()
     
     # Top and bottom borders, adjust depending on walls
     top_wall = " -------"  # Default for no wall
@@ -426,95 +409,9 @@ def print_walls(direction):
     
     print(bottom_wall)  # Bottom border
 
-# Sensor model
-def calculate_cell_probabilities(wall_readings):
-    probabilities = []
-    for cell_idx, cell_config in enumerate(WALL_CONFIG):
-        #print(f"     Cell #: {cell_idx+1}    config:{cell_config}")
-        cell_prob = 1.0
-        for i, cardinal in enumerate(CARDINALS) :
-            s = 1 if cell_config[i] == 'W' else 0
-            z = 1 if wall_readings[cardinal] is True else 0   
-            #print(f"     cardinal: {cardinal}")
-            #print(f"     z = {z} | s = {1}")
-            if z == 1 and s == 1:
-                cell_prob *= 0.8
-            elif z == 1 and s == 0:
-                cell_prob *= 0.4
-            elif z == 0 and s == 1:
-                cell_prob *= 0.2
-            elif z == 0 and s == 0:
-                cell_prob *= 0.6
-        probabilities.append(round(cell_prob,5))
-    #print(probabilities)
-    
-    # normalize probabilities
-    sum_of_probs = sum(probabilities)
-    norm_probs = [prob/sum_of_probs for prob in probabilities]
-    
-    return norm_probs
 
-# Gather highest weighted cell probabilities
-def get_highest_probability_cells(probabilities):
-    max_prob = max(probabilities)
-    highest_prob_cells = [i + 1 for i, prob in enumerate(probabilities) if prob == max_prob]
-    return highest_prob_cells
-
-def print_probabilities(probabilities):
-
-    '''TODO: Print in a grid'''
-
-    for cell, prob in enumerate(probabilities, start=1):
-        print(f"Cell {cell}: Probability = {prob:.3f}")
-
-def get_next_position(current_position):
-    """
-    Calculate the next position to move to based on the next positionition.
-
-    Args:
-        next_positionition (tuple): The robot's current grid position as (r, c).
-
-    Returns:
-        tuple: The next grid position as (r, c).
-    """
-    r, c = current_position
-    cardinal_direction = get_current_facing_cardinal()
-    result = None
-
-    if cardinal_direction == EAST    : result = (r, c + 1)
-    elif cardinal_direction == NORTH : result = (r + 1, c)
-    elif cardinal_direction == WEST  : result = (r, c - 1)
-    elif cardinal_direction == SOUTH : result = (r - 1, c)
-
-    return result
-
-def get_key_from_position(position):
-    return f"{position[0]}-{position[1]}"
-
-def path_logic(visited, ignore_visited, nxt_position):
-    # summary - based on visited locations
-    # the idea is to start with following the left wall and ignore_visited flag 
-    # at every cell determine what is the coordinate you are traversing to next
-    # ask if it is that cell has been visited
-        # if it is and ignore_visited == False
-            # switch wall followings
-            # ignore_visited = True
-        # if it has NOT
-            # ignore_visited = False
-            # keep following the same wall
-    
-    wall_following_changes = False
-    
-    if get_key_from_position(nxt_position) in visited and not ignore_visited:
-        wall_following_changes = True
-        ignore_visited = True
-    else:
-        ignore_visited = False
-
-    return wall_following_changes, ignore_visited
-
-# Robot navigates through the maze function
-def navigate_maze(robot):
+# Navigation logic for l4t2 - localization
+def navigate_localization(robot):
     
     path_head = (0,0)
     visited = set([get_key_from_position(path_head)])
@@ -553,12 +450,12 @@ def navigate_maze(robot):
         # before the robot moves forward
         # read out probable cells
         walls = get_walls(get_current_facing_cardinal())
-        probs = calculate_cell_probabilities(get_walls(get_current_facing_cardinal()))
+        probs = calculate_cell_probabilities(walls)
         probable_cells = get_highest_probability_cells(probs)
         print(f"Predicted cells are: {probable_cells}")
         
         # calc next position
-        next_position = get_next_position(path_head)
+        next_position = get_next_position(path_head, get_current_facing_cardinal())
         
         # determine path logic
         wall_following_changes, ignore_visited = path_logic(visited, ignore_visited, next_position)
@@ -569,7 +466,7 @@ def navigate_maze(robot):
             following_left_wall = not wall_following_changes
         
         # move forward
-        move_forward_one_cell()
+        move_forward_one_cell(is_print=True)
         
         # if not visited, add next position to visited
         coord_key = get_key_from_position(next_position)
@@ -582,20 +479,59 @@ def navigate_maze(robot):
         
 
     print("Robot visited {MAX_CELLS} different cells!")
+
+# Navigation logic for l5t1 - Mapping & Path Planning
+def navigate_path_planning(goal_cell):
+    current_position = Position(GRID_SIZE, robot.starting_position)
+    start_cell = current_position.cell_number
+    path_str = get_shortest_path(CELL_GRAPH, start_cell, goal_cell)
+    nav_str = get_navigation_from_path(path_str, GRID_SIZE)
+    path_list = path_str.split(SPLIT_STR)
     
+    print(f"Path:\n\t{path_str}")
+    print(f"Navigation:\n\t{nav_str}")
+    print("Pose Estimation:")
+    current_position.print_pose()
+
+    heading_itr = 0
+    while robot.timestep != -1 and heading_itr < len(nav_str):
+        
+        nav_heading = nav_str[heading_itr]
+
+        if nav_heading == "E":
+            set_orientation_east(is_print=False)
+            current_position.update_pose(0, 1, robot.get_compass_reading())
+        elif nav_heading == "N":
+            set_orientation_north(is_print=False)
+            current_position.update_pose(1, 0, robot.get_compass_reading())
+        elif nav_heading == "W":
+            set_orientation_west(is_print=False)
+            current_position.update_pose(0, -1, robot.get_compass_reading())
+        elif nav_heading == "S":
+            set_orientation_south(is_print=False)
+            current_position.update_pose(-1, 0, robot.get_compass_reading())
+        else:
+            raise Exception(f"Navigation string error. {nav_heading} is not a valid heading.")
+
+        move_forward_one_cell(is_print = False)
+
+        current_position.print_pose()
+
+        heading_itr += 1
+
+    print("\nDestination has been reached.")
+
+
 # Main program
 def main():
-    # Main loop: Perform simulation Iterations until Webots stops the controller
     start_time = time.time()
 
-    navigate_maze(robot)
-    # while robot.timestep != -1:
-    #     move_forward_one_cell()
-    #     set_orientation_north()
-    #     set_orientation_east()
-    #     set_orientation_west()
-    #     set_orientation_south()
-
+    print("Program Start.")
+    
+    goal = 7
+    print(f"Goal shall be cell number: {goal}")
+    #navigate_localization(robot)
+    navigate_path_planning(goal)
 
     # Calculate total travel time
     end_time = time.time()

@@ -1,9 +1,12 @@
 import pytest
 from particle_filter_helper import (
-    get_environment_coords, 
+    CELL_GRAPH, GRID_SIZE,
+    get_coordinates_from_cellnumber_env, 
     get_cardinal_between_neighbors, 
-    get_all_shortest_paths,
-    get_shortest_path
+    old_get_all_shortest_paths,
+    old_get_shortest_path,
+    get_shortest_path,
+    get_navigation_from_path
 )
 
 @pytest.mark.parametrize(
@@ -15,7 +18,7 @@ from particle_filter_helper import (
     ]
 )
 def test_get_coordinates_from_cellnumber(cell_number, expected):
-    assert get_environment_coords(cell_number) == expected
+    assert get_coordinates_from_cellnumber_env(cell_number) == expected
 
 @pytest.mark.parametrize(
     "start, neighbor, expected",
@@ -29,7 +32,7 @@ def test_get_coordinates_from_cellnumber(cell_number, expected):
 def test_get_cardinal_between_neighbors(start, neighbor, expected):
     assert get_cardinal_between_neighbors(start, neighbor) == expected
 
-def test_get_all_shortest_paths():
+def test_get_all_shortest_paths_old():
     start = 13
     expected = {
          1: (4, "WWNN"),  2: ( 5, "WWNNE"),         3: ( 6, "WWNNEE"),       4: ( 7, "WWNNEEE"),     5: (8, "WWNNEEEE"),
@@ -38,9 +41,20 @@ def test_get_all_shortest_paths():
         16: (3, "WWS"),  17: ( 4, "WWSE"),         18: ( 5, "WWSEE"),       19: ( 4, "EESW"),       20: (3, "EES"),
         21: (4, "WWSS"), 22: ( 5, "WWSSE"),        23: ( 6, "WWSSEE"),      24: ( 5, "EESSW"),      25: (4, "EESS"), 
     }
-    assert get_all_shortest_paths(start) == expected
+    assert old_get_all_shortest_paths(start) == expected
+
+def test_get_shortest_path_old():
+    start, goal = 7, 21
+    expected = "EEENWWWWSSSS"
+    assert old_get_shortest_path(start, goal) == expected
 
 def test_get_shortest_path():
     start, goal = 7, 21
+    expected = "7|8|9|10|5|4|3|2|1|6|11|16|21"
+    assert get_shortest_path(CELL_GRAPH, 7, 21)
+
+def test_get_navigation_from_path():
+    cell_path = "7|8|9|10|5|4|3|2|1|6|11|16|21"
     expected = "EEENWWWWSSSS"
-    assert get_shortest_path(start, goal) == expected
+    assert get_navigation_from_path(cell_path, GRID_SIZE)
+
